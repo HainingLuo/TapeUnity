@@ -168,31 +168,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c01da5005ea083a07a19e46a3615311d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  timeScale: 0.5
+  timeStep: 0.005
   ropeName: 
   ropeMaterial: {fileID: 2100000, guid: 03019be2b7a654429bf322c3ca0c7a0e, type: 2}
   ropeLength: 4.58
   ropeRadius: 0.002
   ropeResolution: 0.2
-  numControlPoints: 10
   ropePooledParticles: 0
   ropeStretchCompliance: 0
   ropeStretchingScale: 1
   ropeBendCompliance: 0
-  ropeMaxBending: 0.005
+  ropeMaxBending: 0.0005
   ropeMass: 0.05
-  ropeDamping: 0
+  ropeDamping: 0.99
   obiSubsteps: 4
   obiGravity: 0
   obiDamping: 0.99
   ropeSelfCollision: 1
-  adjustSpeed: 100
-  gripperTranslationSpeed: 0.01
+  adjustSpeed: 10
+  gripperTranslationSpeed: 0.001
   gripperRotationSpeed: 0.1
   predServiceName: /unity_predict
   adjustServiceName: /unity_adjust
   resetServiceName: /unity_reset
-  adjustTime: 100
-  predictTime: 10
+  adjustTime: 5
+  predictTime: 5
 --- !u!114 &260892983
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -280,8 +281,8 @@ MonoBehaviour:
   worldLinearInertiaScale: 0
   worldAngularInertiaScale: 0
   distanceConstraintParameters:
-    evaluationOrder: 0
-    iterations: 1
+    evaluationOrder: 1
+    iterations: 4
     SORFactor: 1
     enabled: 1
   bendingConstraintParameters:

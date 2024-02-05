@@ -22,6 +22,10 @@ using RosMessageTypes.Tape;
 
 public class Main : MonoBehaviour
 {    
+    // Unity params
+    public float timeScale = 1.0f;
+    public float timeStep = 0.02f;
+
     // obi rope
     private ObiRope rope;
     public string ropeName="";
@@ -31,8 +35,8 @@ public class Main : MonoBehaviour
     public float ropeResolution=0.2f;
     private int ropeColliderFilterEnd = ObiUtils.MakeFilter((1 << 0) | (1 << 1) | (1 << 3), 1);
     private int ropeColliderFilter = ObiUtils.MakeFilter(ObiUtils.CollideWithEverything ^ (1 << 2), 0);
-    public int numControlPoints=10;
-    private List<Vector3> gravity_centres = new List<Vector3>();
+    // public int numControlPoints=10;
+    // private List<Vector3> gravity_centres = new List<Vector3>();
     public int ropePooledParticles=0;
     public float ropeStretchCompliance=0.0f;
     public float ropeStretchingScale=0.0f;
@@ -113,6 +117,8 @@ public class Main : MonoBehaviour
         rosConnector.ImplementService<SimPredRequest, SimPredResponse>(predServiceName, Predict);
         rosConnector.ImplementService<SimAdjustRequest, SimAdjustResponse>(adjustServiceName, Adjust);
         rosConnector.ImplementService<SimResetRequest, SimResetResponse>(resetServiceName, Reset);
+        // TODO: (temp solution) add eyelet for testing only
+        rosConnector.Subscribe<RosPoseArray>("/eyelet_poses", tempEyeletCallback);
 
         // initialise fake grippers
         grippers = new GameObject("Grippers");
@@ -123,13 +129,58 @@ public class Main : MonoBehaviour
         emptyRosQuat.y = 0;
         emptyRosQuat.z = 0;
         emptyRosQuat.w = 0;
+
         // SETUP SIMULATION PARAMETERS
+        Time.timeScale = timeScale;
+        Time.fixedDeltaTime = timeStep;
         // update_time_step = Time.fixedDeltaTime;particle_positions
         // Initialise grasping point
         // int gsp_pt_ptc_id = rope.blueprint.groups[grasp_pt].particleIndices[0];
         // point_g = (Vector3)rope.solver.positions[gsp_pt_ptc_id];
 
     }
+
+
+    //////////// NOT SUPPOSED TO BE HERE ////////////
+    private void tempEyeletCallback(RosPoseArray msg) {
+        Debug.Log("Received eyelet poses!");
+
+        // generate eyelets
+        List<Transform> eyelets = new List<Transform>();
+        GameObject eyelets_object = new GameObject("Eyelets");
+        for (int i=0; i<msg.poses.Count(); i++) {
+            int row = i/2;
+            GameObject eyelet = createCapsuleEyelet("Eyelet "+i.ToString(), 
+                                msg.poses[i].position.From<FLU>(),
+                                msg.poses[i].orientation.From<FLU>(),
+                                Vector3.one*0.06f,
+                                eyelets_object.transform
+                                );
+            eyelets.Add(eyelet.transform);
+        }
+
+    }
+
+    GameObject createCapsuleEyelet(string name, Vector3 position, Quaternion rotation, Vector3 scale, Transform parent) {
+        // generate capsule eyelet
+        GameObject eyelet = new GameObject("Eyelet"+name);
+        int numCapsules=36;
+        for (int i=0; i<numCapsules; i++) {
+            GameObject capsule = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            capsule.name = "Capsule"+i.ToString();
+            capsule.transform.position = new Vector3(Mathf.Cos(360/numCapsules*i)*0.1f, Mathf.Sin(360/numCapsules*i)*0.1f, 0);
+            capsule.transform.rotation = Quaternion.Euler(90, 0, 0); 
+            capsule.transform.localScale = new Vector3(0.05f,0.05f,0.05f);
+            capsule.transform.parent = eyelet.transform;
+            ObiCollider collider = capsule.AddComponent<ObiCollider>();
+        }
+        eyelet.transform.position = position;
+        eyelet.transform.rotation = rotation;
+        eyelet.transform.localScale = scale;
+        eyelet.transform.parent = parent;
+        return eyelet;
+    }
+    /////////////////////////////////////////////////
 
     private async Task<SimResetResponse> Reset(SimResetRequest request) 
     {
@@ -183,9 +234,13 @@ public class Main : MonoBehaviour
         ropeLength = request.rope_length.data;
         // ropeRadius = request.rope_radius.data;
         // generate initail rope config
-        List<Vector3> points = generate_init_poses(0, ropeLength, states.Count(), ropeRadius);
+        // List<Vector3> points = generate_init_poses(0, ropeLength, states.Count(), ropeRadius);
 
         // generate a new rope and grippers
+        List<Vector3> points = new List<Vector3>(states);
+        // add gripper positions to the rope
+        points.Insert(0, request.gripper_poses.poses[0].position.From<FLU>());
+        points.Add(request.gripper_poses.poses[1].position.From<FLU>());
         rope = Generators.Rope(
             points:points,
             material:ropeMaterial,
@@ -204,6 +259,9 @@ public class Main : MonoBehaviour
             substeps:obiSubsteps,
             self_collision:ropeSelfCollision
             );
+        Debug.Log("Generated "+rope.restLength/10+"m long Obi Rope.");
+
+        // update obi parameters
         rope.gameObject.transform.localScale = new Vector3(1f,1f,1f);
         rope.solver.gravity = new Vector3(0,obiGravity,0);
         rope.solver.parameters.damping = obiDamping;
@@ -222,6 +280,9 @@ public class Main : MonoBehaviour
                 ids.Add(id);
             particleIds.Add(ids);
         }
+        // particleIds.RemoveAt(0); // remove the first gripper particle
+        // particleIds.RemoveAt(particleIds.Count-1); // remove the last gripper particle
+        // particleIds.Add(rope.blueprint.groups.First().particleIndices); // add the first gripper particle
 
         // add grippers
         for (int i=0; i<request.gripper_poses.poses.Count(); i++) {
@@ -231,11 +292,6 @@ public class Main : MonoBehaviour
             gripper.transform.rotation = pose.orientation.From<FLU>();
             gripper.transform.parent = grippers.transform;
             grippersList.Add(gripper);
-        // set rope end positions to grippers
-        if (i==0)
-        rope.solver.positions[particleIds[0][0]] = gripper.transform.position;
-        else
-        rope.solver.positions[particleIds.Last()[0]] = gripper.transform.position;
             // add gripper targets
             gripperTargets.Add(gripper.transform.position);
             gripperTargetOrients.Add(gripper.transform.rotation);
@@ -252,8 +308,8 @@ public class Main : MonoBehaviour
             else
                 attachment.enabled = false;
             gripperAttachments.Add(attachment);
-            // add markers
 
+            // add markers
             GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cube);
             marker.name = gripper.name+"Marker";
             marker.transform.position = gripper.transform.position;
@@ -275,17 +331,17 @@ public class Main : MonoBehaviour
         return response;
     }
 
-    List<Vector3> generate_init_poses(float angle, float rope_length, int num_control_points, float cable_radius) {
-        List<Vector3> points = new List<Vector3>();
-        Vector3 point = new Vector3(-rope_length/2*Mathf.Sin(angle)+2.5f, cable_radius, -rope_length/2*Mathf.Cos(angle));
-        float step = rope_length/num_control_points;
-        points.Add(point);
-        for (int i=0; i<num_control_points; i++) {
-            point += new Vector3(step*Mathf.Sin(angle), 0.0f, step*Mathf.Cos(angle));
-            points.Add(point);
-        }
-        return points;
-    }
+    // List<Vector3> generate_init_poses(float angle, float rope_length, int num_control_points, float cable_radius) {
+    //     List<Vector3> points = new List<Vector3>();
+    //     Vector3 point = new Vector3(-rope_length/2*Mathf.Sin(angle)+2.5f, cable_radius, -rope_length/2*Mathf.Cos(angle));
+    //     float step = rope_length/num_control_points;
+    //     points.Add(point);
+    //     for (int i=0; i<num_control_points; i++) {
+    //         point += new Vector3(step*Mathf.Sin(angle), 0.0f, step*Mathf.Cos(angle));
+    //         points.Add(point);
+    //     }
+    //     return points;
+    // }
     
     private async Task<SimAdjustResponse> Adjust(SimAdjustRequest request)
     {
@@ -319,7 +375,7 @@ public class Main : MonoBehaviour
         List<RosPose> poseList = new List<RosPose>();
         for(int i=0; i<states.Count; i++) {
             // update the rope states
-            states[i] = rope.solver.positions[particleIds[i][0]];
+            states[i] = rope.solver.positions[particleIds[i+1][0]];
             poseList.Add(new RosPose(states[i].To<FLU>(), emptyRosQuat));
         }
         response.states_sim.poses = poseList.ToArray();
@@ -343,8 +399,10 @@ public class Main : MonoBehaviour
         int id = -1; // -1 for no particle
         if (gripperOpening>0.1f) return id;
         float minDist = Mathf.Infinity;
-        for (int i=0; i<states.Count; i++) {
-            float dist = Vector3.Distance(states[i], gripperPos);
+        // for (int i=0; i<states.Count; i++) {
+        //     float dist = Vector3.Distance(states[i], gripperPos);
+        for (int i=0; i<rope.blueprint.groups.Count(); i++) {
+            float dist = Vector3.Distance(rope.solver.positions[particleIds[i][0]], gripperPos);
             if (dist<minDist) {
                 minDist = dist;
                 id = i;
@@ -370,7 +428,12 @@ public class Main : MonoBehaviour
             RosPose pose = request.gripper_poses.poses[i];
             gripperTargets[i] = pose.position.From<FLU>();
             gripperTargetOrients[i] = pose.orientation.From<FLU>();
-            graspedParticles[i] = FindGraspedParticleGroup(gripperTargets[i], request.gripper_states.data[i]);
+            // update gripper speed to guarantee reaching the target in prediction time
+            // gripperTranslationSpeed = Vector3.Distance(grippersList[i].transform.position, gripperTargets[i])/(predictTime-1);
+            // gripperRotationSpeed = Quaternion.Angle(grippersList[i].transform.rotation, gripperTargetOrients[i])/(predictTime-1);
+            gripperMarkers[i].transform.position = gripperTargets[i];
+            // TODO grasped particles only change when gripper states change
+            // graspedParticles[i] = FindGraspedParticleGroup(gripperTargets[i], request.gripper_states.data[i]);
         }
 
         // start prediction
@@ -382,7 +445,7 @@ public class Main : MonoBehaviour
         List<RosPose> poseList = new List<RosPose>();
         for(int i=0; i<states.Count; i++) {
             // update the rope states
-            states[i] = rope.solver.positions[particleIds[i][0]];
+            states[i] = rope.solver.positions[particleIds[i+1][0]];
             poseList.Add(new RosPose(states[i].To<FLU>(), emptyRosQuat));
         }
         response.states_pred.poses = poseList.ToArray();
@@ -437,13 +500,13 @@ public class Main : MonoBehaviour
             for (int i=0; i<statesEst.Count; i++) {
                 float3 centre = statesEst[i];
                 // // set particle positions to the estimated states
-                // particle_positions[particleIds[i][0]] = new float4(centre, 1);
+                // particle_positions[particleIds[i+1][0]] = new float4(centre, 1);
 
                 // generate velocity for the control particles
-                var vel = particle_velocities[particleIds[i][0]];
-                // vel.xyz += math.normalizesafe(centre - particle_positions[particleIds[i][0]].xyz) * math.distance(centre, particle_positions[particleIds[i][0]].xyz) * adjustSpeed * Time.deltaTime;
-                vel.xyz += math.normalizesafe(centre - particle_positions[particleIds[i][0]].xyz) * adjustSpeed * Time.deltaTime;
-                particle_velocities[particleIds[i][0]] = vel;
+                var vel = particle_velocities[particleIds[i+1][0]];
+                vel.xyz += math.normalizesafe(centre - particle_positions[particleIds[i+1][0]].xyz) * math.distance(centre, particle_positions[particleIds[i+1][0]].xyz) * adjustSpeed * Time.deltaTime;
+                // vel.xyz += math.normalizesafe(centre - particle_positions[particleIds[i+1][0]].xyz) * adjustSpeed * Time.deltaTime;
+                particle_velocities[particleIds[i+1][0]] = vel;
 
                 // loop through corresponding particle element
                 // foreach (int id in particleIds[i]) {
@@ -460,6 +523,14 @@ public class Main : MonoBehaviour
         }
 
         if (predicting) {
+        
+        float distance = Vector3.Distance(grippersList[0].transform.position, gripperTargets[0]) + 
+                        Vector3.Distance(grippersList[1].transform.position, gripperTargets[1]);
+        if (distance<0.01f) {
+            predicting = false;
+            predictCounter = 0;
+            return;
+        }
             // enable attachments
             if (predictCounter==0) {
                 for (int i=0; i<gripperAttachments.Count; i++) {
@@ -478,10 +549,10 @@ public class Main : MonoBehaviour
             }
             predictCounter++;
         }
-        if (predictCounter>predictTime) {
-            predicting = false;
-            predictCounter = 0;
-        }
+        // if (predictCounter>predictTime) {
+        //     predicting = false;
+        //     predictCounter = 0;
+        // }
     }
 
     // private void update_action() {
