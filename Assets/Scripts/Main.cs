@@ -39,7 +39,7 @@ public class Main : MonoBehaviour
     // private List<Vector3> gravity_centres = new List<Vector3>();
     public int ropePooledParticles=0;
     public float ropeStretchCompliance=0.0f;
-    public float ropeStretchingScale=0.0f;
+    public float ropeStretchingScale=1.0f;
     public float ropeBendCompliance=0.0f;
     public float ropeMaxBending=0.05f;
     public float ropeMass=0.05f;
