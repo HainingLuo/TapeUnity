@@ -227,7 +227,7 @@ MonoBehaviour:
   timeStep: 0.02
   ropeName: 
   ropeMaterial: {fileID: 2100000, guid: 03019be2b7a654429bf322c3ca0c7a0e, type: 2}
-  ropeLength: 0.458
+  ropeLength: 1
   ropeCentre: {x: 0, y: 0, z: 0}
   ropeRadius: 0.003
   ropeResolution: 0.2
@@ -236,10 +236,10 @@ MonoBehaviour:
   ropeStretchCompliance: 0
   ropeStretchingScale: 1
   ropeBendCompliance: 0
-  ropeMaxBending: 0.05
+  ropeMaxBending: 0.005
   ropeMass: 0.05
   ropeDamping: 0
-  obiSubsteps: 4
+  obiSubsteps: 2
   obiGravity: -9.8
   obiDamping: 0.99
   ropeSelfCollision: 1

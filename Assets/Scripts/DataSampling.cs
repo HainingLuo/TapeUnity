@@ -278,7 +278,7 @@ public class DataSampling : MonoBehaviour
         gripperLeft.transform.position = new Vector3(
             Mathf.Clamp(gripperLeft.transform.position.x, -1f, 1f),
             Mathf.Clamp(gripperLeft.transform.position.y, gripperHeight, 1f),
-            Mathf.Clamp(gripperLeft.transform.position.z, -1f, 1f)
+            Mathf.Clamp(gripperLeft.transform.position.z, -0.8f, 0.8f)
         );
         Vector3 rightGripperAction = new Vector3(Input.GetAxis("HorizontalRightGripper"), 
             Input.GetAxis("JumpRightGripper"), 
@@ -288,7 +288,7 @@ public class DataSampling : MonoBehaviour
         gripperRight.transform.position = new Vector3(
             Mathf.Clamp(gripperRight.transform.position.x, -1f, 1f),
             Mathf.Clamp(gripperRight.transform.position.y, gripperHeight, 1f),
-            Mathf.Clamp(gripperRight.transform.position.z, -1f, 1f)
+            Mathf.Clamp(gripperRight.transform.position.z, -0.8f, 0.8f)
         );
 
     }
