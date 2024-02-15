@@ -24,9 +24,9 @@ static class Generators
                                 bool self_collision=true) {
         // CREATING A SOLVER
         // create an object containing both the solver and the updater:
-        GameObject solverObject = GameObject.Find("Obi Solver"+name);
+        GameObject solverObject = GameObject.Find("Obi Solver");
         if (solverObject==null)
-            solverObject = new GameObject("Obi Solver"+name, typeof(ObiSolver));
+            solverObject = new GameObject("Obi Solver", typeof(ObiSolver));
         ObiSolver solver = solverObject.GetComponent<ObiSolver>();
         // Configure the solver
         solver.gravity = new Vector3(0.0f, -9.81f, 0.0f); // Vector3.zero;
