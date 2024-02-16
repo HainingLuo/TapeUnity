@@ -27,13 +27,13 @@ public class PhysicsEstimation : MonoBehaviour
 
     // env variables
     public int numEnvs=9;
+    private int numParams=3;
     public float envSpacing = 3.5f;
     private List<GameObject> envs=new List<GameObject>();
 
     // rope variables
     private List<ObiRope> ropes=new List<ObiRope>();
     private List<string> ropeNames;
-    private List<Vector3> ropeCentres=new List<Vector3>();
     private ObiSolver obiSolver;
     private ObiFixedUpdater obiUpdater;
     public Material ropeMaterial;
@@ -56,26 +56,33 @@ public class PhysicsEstimation : MonoBehaviour
     public float obiDamping=0.99f;
     public bool ropeSelfCollision=true;
     private List<List<int>> ropeParticleIds = new List<List<int>>(); // particle ids of each group
+    private List<List<int>> ropeControlledIds = new List<List<int>>(); // controlled particle ids of each group
 
     // gripper variables
     private List<GameObject> leftGrippers=new List<GameObject>();
     private List<GameObject> rightGrippers=new List<GameObject>();
+    private List<Vector3> leftGrippersTargets=new List<Vector3>();
+    private List<Vector3> rightGrippersTargets=new List<Vector3>();
     // private List<ObiParticleAttachment> gripperAttachments = new List<ObiParticleAttachment>();
     private ObiParticleAttachment leftGripperAttachment;
     private ObiParticleAttachment rightGripperAttachment;
+    public float gripperTranslationSpeed=0.01f; // mm
 
 
     // ROS variables
     private ROSConnection rosConnector;
     private string predServiceName = "/unity_predict";
 
-
+    private bool initialised=false;
+    private bool predicting=false;
+    private int predCounter=0;
+    public int predTime=10;
 
 
     void Start()
     {
         // Create a set of envs
-        int envRows = (int)Mathf.Sqrt(numEnvs);
+        int envRows = (int)Mathf.Ceil(Mathf.Sqrt(numEnvs));
         for (int i=0; i<envRows; i++) {
             for (int j=0; j<envRows; j++) {
                 int idx = i*envRows+j;
@@ -93,6 +100,14 @@ public class PhysicsEstimation : MonoBehaviour
                 plane.AddComponent<ObiCollider>();
             }
         }
+
+        // Create a SimPredBatch server
+        rosConnector = ROSConnection.GetOrCreateInstance();
+        rosConnector.ImplementService<SimPredBatchRequest, SimPredBatchResponse>(predServiceName, predict);
+        
+    }
+
+    void initialiate(List<Vector3> gripperPoses, List<Vector3> particlePositions, List<float> ropeParams) {
         
         // Create a set of grippers
         for (int i=0; i<numEnvs; i++) {
@@ -111,12 +126,16 @@ public class PhysicsEstimation : MonoBehaviour
         }
 
         // Create a set of ropes
-        List<Vector3> points = generate_init_poses(90, ropeLength, ropeNumGroups, ropeRadius, Vector3.zero);
+        // List<Vector3> points = generate_init_poses(90, ropeLength, ropeNumGroups, ropeRadius, Vector3.zero);
         for (int i=0; i<numEnvs; i++) {
             // move points to the env location
-            List<Vector3> temp = new List<Vector3>(points);
-            for (int j=0; j<temp.Count; j++) {
-                temp[j] += envs[i].transform.position;
+            // List<Vector3> temp = new List<Vector3>(points);
+            // for (int j=0; j<temp.Count; j++) {
+            //     temp[j] += envs[i].transform.position;
+            // }
+            List<Vector3> temp = new List<Vector3>();
+            foreach (var p in particlePositions) {
+                temp.Add(envs[i].transform.TransformPoint(p));
             }
             // create a rope
             ObiRope rope = Generators.Rope(
@@ -140,27 +159,34 @@ public class PhysicsEstimation : MonoBehaviour
             rope.gameObject.name += " "+i.ToString();
             ropes.Add(rope);
 
-            // // log the particle ids
-            // foreach (var group in rope.blueprint.groups) {
-            //     List<int> ids = new List<int>();
-            //     foreach (int id in group.particleIndices)
-            //         ids.Add(id);
-            //     ropeParticleIds.Add(ids);
-            // }
+            // log the particle ids
+            List<int> particleIds = new List<int>();
+            List<int> controlledIds = new List<int>();
+            foreach (var group in rope.blueprint.groups) {
+                foreach (int id in group.particleIndices)
+                    particleIds.Add(id);
+                controlledIds.Add(group.particleIndices[0]);
+            }
+            ropeParticleIds.Add(particleIds);
+            ropeControlledIds.Add(controlledIds);
 
             // move grippers
             leftGrippers[i].transform.position = temp[0];
             rightGrippers[i].transform.position = temp[temp.Count-1];
+            leftGrippersTargets.Add(leftGrippers[i].transform.position);
+            rightGrippersTargets.Add(rightGrippers[i].transform.position);
 
             // add gripper attachments
             leftGripperAttachment = rope.gameObject.AddComponent<ObiParticleAttachment>();
             // TODO change attached group id
             leftGripperAttachment.particleGroup = rope.blueprint.groups[0];
             leftGripperAttachment.target = leftGrippers[i].transform;
+            leftGripperAttachment.enabled = true;
             rightGripperAttachment = rope.gameObject.AddComponent<ObiParticleAttachment>();
             // TODO change attached group id
             rightGripperAttachment.particleGroup = rope.blueprint.groups[rope.blueprint.groups.Count-1];
             rightGripperAttachment.target = rightGrippers[i].transform;
+            rightGripperAttachment.enabled = false;
 
         }
         Debug.Log("Generated "+numEnvs+" "+ropes[0].restLength/10+"m long Obi Rope.");
@@ -178,24 +204,73 @@ public class PhysicsEstimation : MonoBehaviour
                 obiUpdater.solvers.Add(obiSolver); // add the solver to the updater:
         obiUpdater.substeps = obiSubsteps;
 
-        // Create a SimPredBatch server
-        rosConnector = ROSConnection.GetOrCreateInstance();
-        rosConnector.ImplementService<SimPredBatchRequest, SimPredBatchResponse>(predServiceName, predict);
-        
+        initialised = true;
     }
 
-    SimPredBatchResponse predict(SimPredBatchRequest request) {
-        // change the simulation parameters
-
-        // reset rope states
-
-        // read gripper states and positions
-
-        // run the simulation
-
-        // return the rope states
+    async Task<SimPredBatchResponse> predict(SimPredBatchRequest request) {
         SimPredBatchResponse response = new SimPredBatchResponse();
+        if (!initialised) {
+            // initialiate(request.gripper_poses_prev.poses.Select(p => p.position.From<FLU>()).ToList(),
+            //             request.states_prev.poses.Select(p => p.position.From<FLU>()).ToList(),
+            //             request.parameters.data.ToList());
+            initialiate(request.gripper_poses_prev.poses.Select(p => PointMsg2Vector3(p.position)).ToList(),
+                        request.states_prev.poses.Select(p => PointMsg2Vector3(p.position)).ToList(),
+                        request.parameters.data.ToList());
+        }
+        else {
+            for (int i=0; i<numEnvs; i++) {
+                // change the simulation parameters
+                ropes[i].bendCompliance = request.parameters.data[i*numParams];
+                ropes[i].stretchCompliance = request.parameters.data[i*numParams+1];
+                // ropes[i].damping = request.parameters.data[i*numParams+2];
+
+                // reset rope states
+                for (int j=0; j<ropeControlledIds[i].Count; j++) {
+                    // TODO do the states from real rope obey sim constraints?
+                    // var pos = envs[i].transform.TransformPoint(request.states_prev.poses[j].position.From<FLU>());
+                    var pos = envs[i].transform.TransformPoint(PointMsg2Vector3(request.states_prev.poses[j].position));
+                    ropes[i].solver.positions[ropeControlledIds[i][j]] = pos;
+                    ropes[i].solver.velocities[ropeControlledIds[i][j]] = Vector3.zero;
+                }
+
+                // read gripper states and positions
+                // leftGrippers[i].transform.position = envs[i].transform.TransformPoint(request.gripper_poses_prev.poses[0].position.From<FLU>());
+                // leftGrippersTargets[i] = envs[i].transform.TransformPoint(request.gripper_poses_curr.poses[0].position.From<FLU>());
+                leftGrippers[i].transform.position = envs[i].transform.TransformPoint(PointMsg2Vector3(request.gripper_poses_prev.poses[0].position));
+                leftGrippersTargets[i] = envs[i].transform.TransformPoint(PointMsg2Vector3(request.gripper_poses_curr.poses[0].position));
+                //TODO snap gripper to the rope
+                int graspedGroup = FindGraspedParticleGroup(leftGrippers[i].transform.position, request.gripper_states.data[0], ropes[i], ropeControlledIds[i]);
+                leftGripperAttachment.particleGroup = ropes[i].blueprint.groups[graspedGroup];
+                leftGripperAttachment.enabled = request.gripper_states.data[0]<=ropeRadius;
+            }
+
+            // run the simulation
+            predicting = true;
+            while (predicting)
+                await Task.Yield();
+
+            // return the rope states
+            // for (int i=0; i<numEnvs; i++) {
+
+            // }
+        }
         return response;
+    }
+
+    private int FindGraspedParticleGroup(Vector3 gripperPos, float gripperOpening, ObiRope rope, List<int> particleIds) {
+        int id = -1; // -1 for no particle
+        if (gripperOpening>0.1f) return id;
+        float minDist = Mathf.Infinity;
+        // for (int i=0; i<states.Count; i++) {
+        //     float dist = Vector3.Distance(states[i], gripperPos);
+        for (int i=0; i<particleIds.Count(); i++) {
+            float dist = Vector3.Distance(rope.solver.positions[particleIds[i]], gripperPos);
+            if (dist<minDist) {
+                minDist = dist;
+                id = i;
+            }
+        }
+        return id;
     }
 
     List<Vector3> generate_init_poses(float angle, float rope_length, int num_control_points, float rope_radius, Vector3 rope_centre) {
@@ -215,6 +290,20 @@ public class PhysicsEstimation : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (!initialised) return;
+        if (predicting) {
+            // move grippers to the target positions
+            for (int i=0; i<numEnvs; i++) {
+                leftGrippers[i].transform.position = Vector3.MoveTowards(leftGrippers[i].transform.position, leftGrippersTargets[i], gripperTranslationSpeed);
+                rightGrippers[i].transform.position = Vector3.MoveTowards(rightGrippers[i].transform.position, rightGrippersTargets[i], gripperTranslationSpeed);
+            }
+            predCounter++;
+        }
+        if (predCounter>predTime) {
+            predicting = false;
+            predCounter = 0;
+        }
         
     }
+    public static Vector3 PointMsg2Vector3(RosPoint v) => new Vector3((float)v.x, (float)v.y, (float)v.z);
 }

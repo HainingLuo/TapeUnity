@@ -221,7 +221,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 137eeacb255121bc8aa4a812119cd842, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numEnvs: 9
+  numEnvs: 100
   envSpacing: 3.5
   ropeMaterial: {fileID: 2100000, guid: 03019be2b7a654429bf322c3ca0c7a0e, type: 2}
   ropeLength: 1
@@ -236,9 +236,11 @@ MonoBehaviour:
   ropeMass: 0.05
   ropeDamping: 0
   obiSubsteps: 4
-  obiGravity: -9.8
+  obiGravity: -9.81
   obiDamping: 0.99
   ropeSelfCollision: 1
+  gripperTranslationSpeed: 0.01
+  predTime: 10
 --- !u!1 &319885550
 GameObject:
   m_ObjectHideFlags: 0
