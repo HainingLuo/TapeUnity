@@ -189,7 +189,7 @@ public class PhysicsEstimation : MonoBehaviour
             rightGripperAttachment.enabled = false;
 
         }
-        Debug.Log("Generated "+numEnvs+" "+ropes[0].restLength/10+"m long Obi Rope.");
+        Debug.Log("Generated "+numEnvs+" "+ropes[0].restLength+"m long Obi Rope.");
 
         // update obi parameters
         GameObject solverObject = GameObject.Find("Obi Solver");
@@ -239,7 +239,8 @@ public class PhysicsEstimation : MonoBehaviour
                 leftGrippers[i].transform.position = envs[i].transform.TransformPoint(PointMsg2Vector3(request.gripper_poses_prev.poses[0].position));
                 leftGrippersTargets[i] = envs[i].transform.TransformPoint(PointMsg2Vector3(request.gripper_poses_curr.poses[0].position));
                 //TODO snap gripper to the rope
-                int graspedGroup = FindGraspedParticleGroup(leftGrippers[i].transform.position, request.gripper_states.data[0], ropes[i], ropeControlledIds[i]);
+                // int graspedGroup = FindGraspedParticleGroup(leftGrippers[i].transform.position, request.gripper_states.data[0], ropes[i], ropeControlledIds[i]);
+                int graspedGroup = 0;
                 leftGripperAttachment.particleGroup = ropes[i].blueprint.groups[graspedGroup];
                 leftGripperAttachment.enabled = request.gripper_states.data[0]<=ropeRadius;
             }
@@ -263,7 +264,7 @@ public class PhysicsEstimation : MonoBehaviour
         float minDist = Mathf.Infinity;
         // for (int i=0; i<states.Count; i++) {
         //     float dist = Vector3.Distance(states[i], gripperPos);
-        for (int i=0; i<particleIds.Count(); i++) {
+        for (int i=0; i<particleIds.Count; i++) {
             float dist = Vector3.Distance(rope.solver.positions[particleIds[i]], gripperPos);
             if (dist<minDist) {
                 minDist = dist;
