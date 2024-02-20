@@ -259,7 +259,7 @@ public class Main : MonoBehaviour
             substeps:obiSubsteps,
             self_collision:ropeSelfCollision
             );
-        Debug.Log("Generated "+rope.restLength/10+"m long Obi Rope.");
+        Debug.Log("Generated "+rope.restLength+"m long Obi Rope.");
 
         // update obi parameters
         rope.gameObject.transform.localScale = new Vector3(1f,1f,1f);

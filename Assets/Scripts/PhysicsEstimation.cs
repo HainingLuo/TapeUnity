@@ -63,9 +63,10 @@ public class PhysicsEstimation : MonoBehaviour
     private List<GameObject> rightGrippers=new List<GameObject>();
     private List<Vector3> leftGrippersTargets=new List<Vector3>();
     private List<Vector3> rightGrippersTargets=new List<Vector3>();
-    // private List<ObiParticleAttachment> gripperAttachments = new List<ObiParticleAttachment>();
-    private ObiParticleAttachment leftGripperAttachment;
-    private ObiParticleAttachment rightGripperAttachment;
+    private List<ObiParticleAttachment> leftGripperAttachments = new List<ObiParticleAttachment>();
+    private List<ObiParticleAttachment> rightGripperAttachments = new List<ObiParticleAttachment>();
+    // private ObiParticleAttachment leftGripperAttachment;
+    // private ObiParticleAttachment rightGripperAttachment;
     public float gripperTranslationSpeed=0.01f; // mm
 
 
@@ -91,13 +92,15 @@ public class PhysicsEstimation : MonoBehaviour
                 env.transform.position = 
                         new Vector3((j-envRows/2)*envSpacing, 0, -(i-envRows/2)*envSpacing);
                 envs.Add(env);
-                // add a plane
-                GameObject plane = GameObject.CreatePrimitive(PrimitiveType.Plane);
-                plane.transform.position = env.transform.position;
-                plane.transform.localScale = new Vector3(0.3f, 1.0f, 0.3f);
-                plane.transform.parent = env.transform;
-                plane.GetComponent<MeshRenderer>().material = Resources.Load<Material>("Materials/Black");
-                plane.AddComponent<ObiCollider>();
+                // // add a plane
+                // // GameObject plane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                // GameObject plane = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                // plane.transform.position = env.transform.position-Vector3.up*0.05f;
+                // // plane.transform.localScale = new Vector3(0.3f, 1.0f, 0.3f);
+                // plane.transform.localScale = new Vector3(3f, 0.1f, 3f);
+                // plane.transform.parent = env.transform;
+                // plane.GetComponent<MeshRenderer>().material = Resources.Load<Material>("Materials/Black");
+                // plane.AddComponent<ObiCollider>();
             }
         }
 
@@ -126,70 +129,110 @@ public class PhysicsEstimation : MonoBehaviour
         }
 
         // Create a set of ropes
-        // List<Vector3> points = generate_init_poses(90, ropeLength, ropeNumGroups, ropeRadius, Vector3.zero);
-        for (int i=0; i<numEnvs; i++) {
-            // move points to the env location
-            // List<Vector3> temp = new List<Vector3>(points);
-            // for (int j=0; j<temp.Count; j++) {
-            //     temp[j] += envs[i].transform.position;
-            // }
-            List<Vector3> temp = new List<Vector3>();
-            foreach (var p in particlePositions) {
-                temp.Add(envs[i].transform.TransformPoint(p));
-            }
-            // create a rope
-            ObiRope rope = Generators.Rope(
-                points:temp,
-                material:ropeMaterial,
-                collider_filter:ropeColliderFilter,
-                collider_filter_end:ropeColliderFilterEnd,
-                rope_radius:ropeRadius,
-                resolution:ropeResolution,
-                pooled_particles:ropePooledParticles,
-                name:"rope"+i.ToString(),
-                stretch_compliance:ropeStretchCompliance,
-                stretching_scale:ropeStretchingScale,
-                bend_compliance:ropeBendCompliance,
-                max_bending:ropeMaxBending,
-                mass:ropeMass,
-                damping:ropeDamping,
-                substeps:obiSubsteps,
-                self_collision:ropeSelfCollision
-            );
-            rope.gameObject.name += " "+i.ToString();
-            ropes.Add(rope);
+        // store the starting time
+        float startTime = Time.realtimeSinceStartup;
+        // for (int i=0; i<numEnvs; i++) {
+        //     // move points to the env location
+        //     // List<Vector3> temp = new List<Vector3>(points);
+        //     // for (int j=0; j<temp.Count; j++) {
+        //     //     temp[j] += envs[i].transform.position;
+        //     // }
+        //     List<Vector3> temp = new List<Vector3>();
+        //     foreach (var p in particlePositions) {
+        //         temp.Add(envs[i].transform.TransformPoint(p));
+        //     }
+        //     // create a rope
+        //     ObiRope rope = Generators.Rope(
+        //         points:temp,
+        //         material:ropeMaterial,
+        //         collider_filter:ropeColliderFilter,
+        //         collider_filter_end:ropeColliderFilterEnd,
+        //         rope_radius:ropeRadius,
+        //         resolution:ropeResolution,
+        //         pooled_particles:ropePooledParticles,
+        //         name:"rope"+i.ToString(),
+        //         stretch_compliance:ropeStretchCompliance,
+        //         stretching_scale:ropeStretchingScale,
+        //         bend_compliance:ropeBendCompliance,
+        //         max_bending:ropeMaxBending,
+        //         mass:ropeMass,
+        //         damping:ropeDamping,
+        //         substeps:obiSubsteps,
+        //         self_collision:ropeSelfCollision
+        //     );
+        //     rope.gameObject.name += " "+i.ToString();
+        //     ropes.Add(rope);
+        // }
 
+        // create ropes
+        ropes = Generators.Ropes(
+            points: particlePositions,
+            material:ropeMaterial,
+            collider_filter:ropeColliderFilter,
+            collider_filter_end:ropeColliderFilterEnd,
+            rope_radius:ropeRadius,
+            resolution:ropeResolution,
+            pooled_particles:ropePooledParticles,
+            stretch_compliance:ropeStretchCompliance,
+            stretching_scale:ropeStretchingScale,
+            bend_compliance:ropeBendCompliance,
+            max_bending:ropeMaxBending,
+            mass:ropeMass,
+            damping:ropeDamping,
+            substeps:obiSubsteps,
+            self_collision:ropeSelfCollision,
+            env_locations: envs.Select(e => e.transform.position).ToList()
+        );
+
+        for (int i=0; i<numEnvs; i++) {
             // log the particle ids
             List<int> particleIds = new List<int>();
             List<int> controlledIds = new List<int>();
+            ObiRope rope = ropes[i];
+            // // number of elements is 1 less than the number of groups
+            // foreach(var element in rope.elements) {
+            //     controlledIds.Add(element.particle1);
+            // }
+            // controlledIds.Add(rope.elements[rope.elements.Count-1].particle2);
+            // ropeControlledIds.Add(controlledIds);
+
             foreach (var group in rope.blueprint.groups) {
                 foreach (int id in group.particleIndices)
-                    particleIds.Add(id);
-                controlledIds.Add(group.particleIndices[0]);
+                    particleIds.Add(rope.solverIndices[id]);
+                controlledIds.Add(rope.solverIndices[group.particleIndices[0]]);
             }
             ropeParticleIds.Add(particleIds);
             ropeControlledIds.Add(controlledIds);
 
             // move grippers
-            leftGrippers[i].transform.position = temp[0];
-            rightGrippers[i].transform.position = temp[temp.Count-1];
+            // leftGrippers[i].transform.position = temp[0];
+            // rightGrippers[i].transform.position = temp[temp.Count-1];
+            leftGrippers[i].transform.position = envs[i].transform.TransformPoint(particlePositions[0]);
+            rightGrippers[i].transform.position = envs[i].transform.TransformPoint(particlePositions[particlePositions.Count-1]);
             leftGrippersTargets.Add(leftGrippers[i].transform.position);
             rightGrippersTargets.Add(rightGrippers[i].transform.position);
 
             // add gripper attachments
-            leftGripperAttachment = rope.gameObject.AddComponent<ObiParticleAttachment>();
+            ObiParticleAttachment leftGripperAttachment = rope.gameObject.AddComponent<ObiParticleAttachment>();
             // TODO change attached group id
             leftGripperAttachment.particleGroup = rope.blueprint.groups[0];
             leftGripperAttachment.target = leftGrippers[i].transform;
-            leftGripperAttachment.enabled = true;
-            rightGripperAttachment = rope.gameObject.AddComponent<ObiParticleAttachment>();
+            leftGripperAttachment.enabled = false;
+            leftGripperAttachments.Add(leftGripperAttachment);
+
+            ObiParticleAttachment rightGripperAttachment = rope.gameObject.AddComponent<ObiParticleAttachment>();
             // TODO change attached group id
             rightGripperAttachment.particleGroup = rope.blueprint.groups[rope.blueprint.groups.Count-1];
             rightGripperAttachment.target = rightGrippers[i].transform;
             rightGripperAttachment.enabled = false;
+            rightGripperAttachments.Add(rightGripperAttachment);
 
         }
         Debug.Log("Generated "+numEnvs+" "+ropes[0].restLength+"m long Obi Rope.");
+
+        // calculate the time it took to generate the ropes
+        float elapsedTime = Time.realtimeSinceStartup - startTime;
+        Debug.Log("Elapsed time: " + elapsedTime);
 
         // update obi parameters
         GameObject solverObject = GameObject.Find("Obi Solver");
@@ -229,8 +272,21 @@ public class PhysicsEstimation : MonoBehaviour
                     // TODO do the states from real rope obey sim constraints?
                     // var pos = envs[i].transform.TransformPoint(request.states_prev.poses[j].position.From<FLU>());
                     var pos = envs[i].transform.TransformPoint(PointMsg2Vector3(request.states_prev.poses[j].position));
-                    ropes[i].solver.positions[ropeControlledIds[i][j]] = pos;
-                    ropes[i].solver.velocities[ropeControlledIds[i][j]] = Vector3.zero;
+                     obiSolver.positions[ropeControlledIds[i][j]] = 
+                obiSolver.prevPositions[ropeControlledIds[i][j]] = 
+                obiSolver.renderablePositions[ropeControlledIds[i][j]] = 
+                obiSolver.startPositions[ropeControlledIds[i][j]] = pos;
+                    obiSolver.velocities[ropeControlledIds[i][j]] = Vector4.zero;
+                    obiSolver.angularVelocities[ropeControlledIds[i][j]] = Vector4.zero;
+
+                obiSolver.invMasses[ropeControlledIds[i][j]] = 0; // stops particles from moving
+                //     int id = ropes[i].solverIndices[ropes[i].blueprint.groups[j].particleIndices[0]];
+                //     obiSolver.positions[id] = 
+                // obiSolver.prevPositions[id] = 
+                // obiSolver.renderablePositions[id] = 
+                // obiSolver.startPositions[id] = pos;
+                //     obiSolver.velocities[id] = Vector4.zero;
+                //     obiSolver.angularVelocities[id] = Vector4.zero;
                 }
 
                 // read gripper states and positions
@@ -241,14 +297,19 @@ public class PhysicsEstimation : MonoBehaviour
                 //TODO snap gripper to the rope
                 // int graspedGroup = FindGraspedParticleGroup(leftGrippers[i].transform.position, request.gripper_states.data[0], ropes[i], ropeControlledIds[i]);
                 int graspedGroup = 0;
-                leftGripperAttachment.particleGroup = ropes[i].blueprint.groups[graspedGroup];
-                leftGripperAttachment.enabled = request.gripper_states.data[0]<=ropeRadius;
+                leftGripperAttachments[i].particleGroup = ropes[i].blueprint.groups[graspedGroup];
+                // leftGripperAttachments[i].enabled = request.gripper_states.data[0]<=ropeRadius;
             }
 
             // run the simulation
             predicting = true;
             while (predicting)
                 await Task.Yield();
+
+    while(!Input.GetKeyDown(KeyCode.Space))
+    {
+                await Task.Yield();
+    }
 
             // return the rope states
             // for (int i=0; i<numEnvs; i++) {
@@ -293,6 +354,12 @@ public class PhysicsEstimation : MonoBehaviour
     {
         if (!initialised) return;
         if (predicting) {
+            // reset particle invMasses
+            for (int i=0; i<numEnvs; i++) {
+                for (int j=0; j<ropeControlledIds[i].Count; j++) {
+                    obiSolver.invMasses[ropeControlledIds[i][j]] = 1/ropeMass;
+                }
+            }
             // move grippers to the target positions
             for (int i=0; i<numEnvs; i++) {
                 leftGrippers[i].transform.position = Vector3.MoveTowards(leftGrippers[i].transform.position, leftGrippersTargets[i], gripperTranslationSpeed);

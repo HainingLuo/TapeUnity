@@ -470,7 +470,7 @@ MonoBehaviour:
   worldAngularInertiaScale: 0
   distanceConstraintParameters:
     evaluationOrder: 0
-    iterations: 1
+    iterations: 20
     SORFactor: 1
     enabled: 1
   bendingConstraintParameters:

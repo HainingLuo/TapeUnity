@@ -148,7 +148,7 @@ public class DataSampling : MonoBehaviour
         foreach (var group in rope.blueprint.groups) {
             List<int> ids = new List<int>();
             foreach (int id in group.particleIndices)
-                ids.Add(id);
+                ids.Add(rope.solverIndices[id]);
             ropeParticleIds.Add(ids);
         }
         // particleIds.RemoveAt(0); // remove the first gripper particle
