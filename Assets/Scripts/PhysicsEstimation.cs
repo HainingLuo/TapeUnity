@@ -92,15 +92,15 @@ public class PhysicsEstimation : MonoBehaviour
                 env.transform.position = 
                         new Vector3((j-envRows/2)*envSpacing, 0, -(i-envRows/2)*envSpacing);
                 envs.Add(env);
-                // // add a plane
-                // // GameObject plane = GameObject.CreatePrimitive(PrimitiveType.Plane);
-                // GameObject plane = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                // plane.transform.position = env.transform.position-Vector3.up*0.05f;
-                // // plane.transform.localScale = new Vector3(0.3f, 1.0f, 0.3f);
-                // plane.transform.localScale = new Vector3(3f, 0.1f, 3f);
-                // plane.transform.parent = env.transform;
-                // plane.GetComponent<MeshRenderer>().material = Resources.Load<Material>("Materials/Black");
-                // plane.AddComponent<ObiCollider>();
+                // add a plane
+                // GameObject plane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                GameObject plane = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                plane.transform.position = env.transform.position-Vector3.up*0.05f;
+                // plane.transform.localScale = new Vector3(0.3f, 1.0f, 0.3f);
+                plane.transform.localScale = new Vector3(3f, 0.1f, 3f);
+                plane.transform.parent = env.transform;
+                plane.GetComponent<MeshRenderer>().material = Resources.Load<Material>("Materials/Black");
+                plane.AddComponent<ObiCollider>();
             }
         }
 
@@ -164,15 +164,16 @@ public class PhysicsEstimation : MonoBehaviour
         //     ropes.Add(rope);
         // }
 
-        // create ropes
-        ropes = Generators.Ropes(
-            points: particlePositions,
+
+        ObiRope ropeTemplate = Generators.Rope(
+            points:particlePositions,
             material:ropeMaterial,
             collider_filter:ropeColliderFilter,
             collider_filter_end:ropeColliderFilterEnd,
             rope_radius:ropeRadius,
             resolution:ropeResolution,
             pooled_particles:ropePooledParticles,
+            name:"",
             stretch_compliance:ropeStretchCompliance,
             stretching_scale:ropeStretchingScale,
             bend_compliance:ropeBendCompliance,
@@ -180,9 +181,48 @@ public class PhysicsEstimation : MonoBehaviour
             mass:ropeMass,
             damping:ropeDamping,
             substeps:obiSubsteps,
-            self_collision:ropeSelfCollision,
-            env_locations: envs.Select(e => e.transform.position).ToList()
-        );
+            self_collision:ropeSelfCollision);
+        GameObject ropeObject = ropeTemplate.gameObject;
+
+        for (int i=0; i<numEnvs; i++) {
+            // move points to the env location
+            // List<Vector3> temp = new List<Vector3>(points);
+            // for (int j=0; j<temp.Count; j++) {
+            //     temp[j] += envs[i].transform.position;
+            // }
+            // List<Vector3> temp = new List<Vector3>();
+            // foreach (var p in particlePositions) {
+            //     temp.Add(envs[i].transform.TransformPoint(p));
+            // }
+            // copy a rope object
+            var newRopeObj = Instantiate(ropeObject);
+            newRopeObj.transform.position = envs[i].transform.position;
+            ropes.Add(newRopeObj.GetComponent<ObiRope>());
+            newRopeObj.name += " "+i.ToString();
+        }
+
+        // // create ropes
+        // ropes = Generators.Ropes(
+        //     points: particlePositions,
+        //     material:ropeMaterial,
+        //     collider_filter:ropeColliderFilter,
+        //     collider_filter_end:ropeColliderFilterEnd,
+        //     rope_radius:ropeRadius,
+        //     resolution:ropeResolution,
+        //     pooled_particles:ropePooledParticles,
+        //     stretch_compliance:ropeStretchCompliance,
+        //     stretching_scale:ropeStretchingScale,
+        //     bend_compliance:ropeBendCompliance,
+        //     max_bending:ropeMaxBending,
+        //     mass:ropeMass,
+        //     damping:ropeDamping,
+        //     substeps:obiSubsteps,
+        //     self_collision:ropeSelfCollision,
+        //     env_locations: envs.Select(e => e.transform.position).ToList()
+        // );
+
+        // print time used
+        Debug.Log("Elapsed time: " + (Time.realtimeSinceStartup - startTime) + "s");
 
         for (int i=0; i<numEnvs; i++) {
             // log the particle ids
@@ -217,7 +257,7 @@ public class PhysicsEstimation : MonoBehaviour
             // TODO change attached group id
             leftGripperAttachment.particleGroup = rope.blueprint.groups[0];
             leftGripperAttachment.target = leftGrippers[i].transform;
-            leftGripperAttachment.enabled = false;
+            leftGripperAttachment.enabled = true;
             leftGripperAttachments.Add(leftGripperAttachment);
 
             ObiParticleAttachment rightGripperAttachment = rope.gameObject.AddComponent<ObiParticleAttachment>();

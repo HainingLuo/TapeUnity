@@ -82,10 +82,13 @@ static class Generators
                                      float substeps=1,
                                      bool self_collision=true,
                                      List<Vector3> env_locations=null) {
+    float startTime = Time.realtimeSinceStartup;
         
         ObiSolver solver = setSolver(damping: damping, 
                                     surfaceCollisionIterations: 4, 
                                     gravity: new Vector3(0.0f, -9.81f, 0.0f));
+    Debug.Log("Solver time: " + (Time.realtimeSinceStartup - startTime).ToString());
+    float blueprintstartTime = Time.realtimeSinceStartup;
         ObiRopeBlueprint ropeBlueprint = setBlueprint(rope_radius: rope_radius, 
                                                     resolution: resolution, 
                                                     pooled_particles: pooled_particles, 
@@ -93,10 +96,13 @@ static class Generators
                                                     collider_filter: collider_filter,
                                                     collider_filter_end: collider_filter_end,
                                                     points: points);
-
+        // var ropeBlueprint = ScriptableObject.Instantiate(ropeBlueprint);
+    Debug.Log("Blueprint time: " + (Time.realtimeSinceStartup - blueprintstartTime).ToString());
+        var ropeSection = Resources.Load<ObiRopeSection>("DefaultRopeSection"); // load the default rope section:
         List<ObiRope> ropes = new List<ObiRope>();
         // foreach (Vector3 point in env_locations) {
         for (int i=0; i<env_locations.Count; i++) {
+        float ropestartTime = Time.realtimeSinceStartup;
             Vector3 point = env_locations[i];
             GameObject ropeObject = new GameObject("Obi Rope "+i.ToString(), typeof(ObiRope), typeof(ObiRopeExtrudedRenderer)); // create a rope:
             // set rope object position
@@ -114,11 +120,15 @@ static class Generators
             path_smoother.smoothing = 2;
 
             ObiRopeExtrudedRenderer ropeRenderer = ropeObject.GetComponent<ObiRopeExtrudedRenderer>();        
-            ropeRenderer.section = Resources.Load<ObiRopeSection>("DefaultRopeSection"); // load the default rope section:
+            ropeRenderer.section =ropeSection;
             ropeRenderer.thicknessScale = 1.0f;
             ropeRenderer.uvScale = new Vector2(1,2);
 
-            rope.ropeBlueprint = ScriptableObject.Instantiate(ropeBlueprint); // instantiate and set the blueprint:
+
+        float blueprint_start = Time.realtimeSinceStartup;
+            // rope.ropeBlueprint = ScriptableObject.Instantiate(ropeBlueprint); // instantiate and set the blueprint:
+            rope.ropeBlueprint = ropeBlueprint; // instantiate and set the blueprint:
+        Debug.Log("Blueprint time: " + (Time.realtimeSinceStartup - blueprint_start).ToString());
             rope.transform.parent = solver.transform; // parent the cloth under a solver to start simulation:
 
             // CHANGE ROPE MATERIAL
@@ -127,6 +137,7 @@ static class Generators
             // meshRenderer.material.color = Color.white;
 
             ropes.Add(rope);
+        Debug.Log("Rope time: " + (Time.realtimeSinceStartup - ropestartTime).ToString());
         }
         return ropes;
     }
