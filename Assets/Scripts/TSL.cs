@@ -30,7 +30,7 @@ public class TSL : MonoBehaviour
     private ObiRope rope;
     public string ropeName="";
     public Material ropeMaterial;
-    public float ropeLength=13.8f;
+    private float ropeLength=13.8f;
     public float ropeRadius=0.03f;
     public float ropeResolution=0.2f;
     private int ropeColliderFilterEnd = ObiUtils.MakeFilter((1 << 0) | (1 << 1) | (1 << 3), 1);
