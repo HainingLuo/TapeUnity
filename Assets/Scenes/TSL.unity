@@ -208,16 +208,17 @@ MonoBehaviour:
   obiGravity: 0
   obiDamping: 0.99
   ropeSelfCollision: 1
-  adjustSpeed: 100
-  gripperTranslationSpeed: 0.001
+  adjustSpeed: 0.1
+  gripperTranslationSpeed: 0.5
   gripperRotationSpeed: 0.1
+  gripperPID: {x: 0.03, y: 0, z: 0}
   predServiceName: /unity_predict
   adjustServiceName: /unity_adjust
   resetServiceName: /unity_reset
   eyelet_offset:
-  - {x: 0, y: -0.002, z: 0}
   - {x: 0, y: 0.002, z: 0}
-  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0.002, z: 0}
+  - {x: 0, y: 0.002, z: 0}
   - {x: 0, y: 0.002, z: 0}
   adjustTime: 5
   predictTime: 5
