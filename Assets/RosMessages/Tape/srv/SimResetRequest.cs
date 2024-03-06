@@ -18,6 +18,7 @@ namespace RosMessageTypes.Tape
         public Std.Float32Msg rope_radius;
         public Geometry.PoseArrayMsg gripper_poses;
         public Std.Float32MultiArrayMsg gripper_states;
+        public Geometry.TransformMsg cam2rob;
 
         public SimResetRequest()
         {
@@ -26,15 +27,17 @@ namespace RosMessageTypes.Tape
             this.rope_radius = new Std.Float32Msg();
             this.gripper_poses = new Geometry.PoseArrayMsg();
             this.gripper_states = new Std.Float32MultiArrayMsg();
+            this.cam2rob = new Geometry.TransformMsg();
         }
 
-        public SimResetRequest(Geometry.PoseArrayMsg states_est, Std.Float32Msg rope_length, Std.Float32Msg rope_radius, Geometry.PoseArrayMsg gripper_poses, Std.Float32MultiArrayMsg gripper_states)
+        public SimResetRequest(Geometry.PoseArrayMsg states_est, Std.Float32Msg rope_length, Std.Float32Msg rope_radius, Geometry.PoseArrayMsg gripper_poses, Std.Float32MultiArrayMsg gripper_states, Geometry.TransformMsg cam2rob)
         {
             this.states_est = states_est;
             this.rope_length = rope_length;
             this.rope_radius = rope_radius;
             this.gripper_poses = gripper_poses;
             this.gripper_states = gripper_states;
+            this.cam2rob = cam2rob;
         }
 
         public static SimResetRequest Deserialize(MessageDeserializer deserializer) => new SimResetRequest(deserializer);
@@ -46,6 +49,7 @@ namespace RosMessageTypes.Tape
             this.rope_radius = Std.Float32Msg.Deserialize(deserializer);
             this.gripper_poses = Geometry.PoseArrayMsg.Deserialize(deserializer);
             this.gripper_states = Std.Float32MultiArrayMsg.Deserialize(deserializer);
+            this.cam2rob = Geometry.TransformMsg.Deserialize(deserializer);
         }
 
         public override void SerializeTo(MessageSerializer serializer)
@@ -55,6 +59,7 @@ namespace RosMessageTypes.Tape
             serializer.Write(this.rope_radius);
             serializer.Write(this.gripper_poses);
             serializer.Write(this.gripper_states);
+            serializer.Write(this.cam2rob);
         }
 
         public override string ToString()
@@ -64,7 +69,8 @@ namespace RosMessageTypes.Tape
             "\nrope_length: " + rope_length.ToString() +
             "\nrope_radius: " + rope_radius.ToString() +
             "\ngripper_poses: " + gripper_poses.ToString() +
-            "\ngripper_states: " + gripper_states.ToString();
+            "\ngripper_states: " + gripper_states.ToString() +
+            "\ncam2rob: " + cam2rob.ToString();
         }
 
 #if UNITY_EDITOR

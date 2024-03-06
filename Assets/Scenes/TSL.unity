@@ -194,7 +194,6 @@ MonoBehaviour:
   timeStep: 0.005
   ropeName: 
   ropeMaterial: {fileID: 2100000, guid: 03019be2b7a654429bf322c3ca0c7a0e, type: 2}
-  ropeLength: 4.58
   ropeRadius: 0.002
   ropeResolution: 0.2
   ropePooledParticles: 0
@@ -211,7 +210,7 @@ MonoBehaviour:
   adjustSpeed: 0.1
   gripperTranslationSpeed: 0.5
   gripperRotationSpeed: 0.1
-  gripperPID: {x: 0.03, y: 0, z: 0}
+  gripperPID: {x: 10, y: 0, z: 1}
   predServiceName: /unity_predict
   adjustServiceName: /unity_adjust
   resetServiceName: /unity_reset
@@ -220,8 +219,8 @@ MonoBehaviour:
   - {x: 0, y: 0.002, z: 0}
   - {x: 0, y: 0.002, z: 0}
   - {x: 0, y: 0.002, z: 0}
-  adjustTime: 5
-  predictTime: 5
+  adjustTime: 50
+  predictTime: 50
 --- !u!1 &319885550
 GameObject:
   m_ObjectHideFlags: 0
