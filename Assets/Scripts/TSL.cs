@@ -109,6 +109,8 @@ public class TSL : MonoBehaviour
     private int predictCounter=0;
     public int predictTime=10;
     private float adjustErrorPrev=0;
+    public float adjustDistThresh=0.001f;
+    public float predDistThresh=0.001f;
 
 
     async void Start()
@@ -494,24 +496,24 @@ public class TSL : MonoBehaviour
         if (!initialised) return;
 
         
-            Vector3 testAction = new Vector3(Input.GetAxis("HorizontalLeftGripper"), 
-                Input.GetAxis("JumpLeftGripper"), 
-                Input.GetAxis("VerticalLeftGripper"))*0.1f;
-            if (testAction!=Vector3.zero) {
-                gripperTargets[0] += testAction;
-                gripperMarkers[0].transform.position = gripperTargets[0];
-                gripperPIDIntegral[0] = Vector3.zero;
-                gripperPIDLastErrors[0] = gripperMarkers[0].transform.position - grippersList[0].transform.position;
-                predicting = true;
-            }
+            // Vector3 testAction = new Vector3(Input.GetAxis("HorizontalLeftGripper"), 
+            //     Input.GetAxis("JumpLeftGripper"), 
+            //     Input.GetAxis("VerticalLeftGripper"))*0.1f;
+            // if (testAction!=Vector3.zero) {
+            //     gripperTargets[0] += testAction;
+            //     gripperMarkers[0].transform.position = gripperTargets[0];
+            //     gripperPIDIntegral[0] = Vector3.zero;
+            //     gripperPIDLastErrors[0] = gripperMarkers[0].transform.position - grippersList[0].transform.position;
+            //     predicting = true;
+            // }
 
         if (adjusting) {
             float distance = 0;
             for (int i=0; i<numStates; i++) {
                 distance += Vector3.Distance(statesEst[i], rope.solver.positions[particleIds[i][0]]);
             }
-            if ((distance-adjustErrorPrev)<0.001f || adjustCounter>adjustTime) {
-                if ((distance-adjustErrorPrev)>=0.001f) Debug.Log("Adjustment time out!");
+            if ((distance-adjustErrorPrev)<adjustDistThresh || adjustCounter>adjustTime) {
+                if ((distance-adjustErrorPrev)>=adjustDistThresh) Debug.Log("Adjustment time out!");
                 else Debug.Log("Adjustment finished in "+adjustCounter+" steps. Final distance: "+distance/numStates+"m.");
                 adjusting = false;
                 adjustCounter = 0;
@@ -536,6 +538,7 @@ public class TSL : MonoBehaviour
                 var pos = particle_positions[particleIds[i][0]];
                 // vel.xyz += math.normalizesafe(centre - particle_positions[particleIds[i+1][0]].xyz) * math.distance(centre, particle_positions[particleIds[i+1][0]].xyz) * adjustSpeed * Time.deltaTime;
                 // vel.xyz += math.normalizesafe(centre - particle_positions[particleIds[i+1][0]].xyz) * adjustSpeed;
+
                 //PID
                 Vector3 error = centre - particle_positions[particleIds[i][0]].xyz;
                 ropePIDIntegral[i] += error * Time.deltaTime;
@@ -545,14 +548,24 @@ public class TSL : MonoBehaviour
                 input = Vector3.ClampMagnitude(input, adjustSpeed); // clamp input
                 // pos.xyz += (float3)input;
                 // particle_positions[particleIds[i][0]] = pos;
-                vel.xyz += (float3)input;
-                particle_velocities[particleIds[i][0]] = vel;
+                // vel.xyz += (float3)input;
+                // particle_velocities[particleIds[i][0]] = vel;
+                rope.solver.externalForces[particleIds[i][0]] += (Vector4)input;
 
-                // loop through corresponding particle element
+                // // 'gravity'
+                // Vector4 force = new Vector4();
+                // force = (Vector3)(centre - particle_positions[particleIds[i][0]].xyz)* adjustSpeed;
+                // // execute control signals
+                // rope.solver.externalForces[particleIds[i][0]] += force;
+
                 // foreach (int id in particleIds[i]) {
-                //     var vel = particle_velocities[id];
-                //     vel.xyz += math.normalizesafe(centre - particle_positions[id].xyz) * math.distance(centre, particle_positions[id].xyz) * adjustSpeed * Time.deltaTime;
-                //     particle_velocities[id] = vel;
+                //     // var vel = particle_velocities[id];
+                //     // vel.xyz += math.normalizesafe(centre - particle_positions[id].xyz) * math.distance(centre, particle_positions[id].xyz) * adjustSpeed * Time.deltaTime;
+                //     // particle_velocities[id] = vel;
+                // Vector4 force = new Vector4();
+                // force = math.distance(centre, particle_positions[id].xyz* adjustSpeed);
+                // // execute control signals
+                // rope.solver.externalForces[id] += force;
                 // }
             }
             adjustCounter++;
@@ -571,8 +584,8 @@ public class TSL : MonoBehaviour
         if (predicting) {
         float distance = Vector3.Distance(grippersList[0].transform.position, gripperMarkers[0].transform.position) + 
                         Vector3.Distance(grippersList[1].transform.position, gripperMarkers[1].transform.position);
-        if (distance<0.01f || predictCounter>predictTime) {
-            if (distance>=0.01f) Debug.Log("Prediction time out!");
+        if (distance<predDistThresh || predictCounter>predictTime) {
+            if (distance>=predDistThresh) Debug.Log("Prediction time out!");
             else Debug.Log("Prediction finished in "+predictCounter+" steps.");
             predicting = false;
             predictCounter = 0;

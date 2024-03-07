@@ -238,7 +238,7 @@ public class PhysicsEstimation : MonoBehaviour
 
             foreach (var group in rope.blueprint.groups) {
                 foreach (int id in group.particleIndices)
-                    particleIds.Add(rope.solverIndices[id]);
+                    particleIds.Add(rope.solverIndices[group.particleIndices[i]]);
                 controlledIds.Add(rope.solverIndices[group.particleIndices[0]]);
             }
             ropeParticleIds.Add(particleIds);

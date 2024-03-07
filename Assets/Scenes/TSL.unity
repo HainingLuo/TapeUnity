@@ -200,14 +200,15 @@ MonoBehaviour:
   ropeStretchCompliance: 0
   ropeStretchingScale: 1
   ropeBendCompliance: 0
-  ropeMaxBending: 0.0005
+  ropeMaxBending: 0.005
   ropeMass: 0.05
   ropeDamping: 0.99
   obiSubsteps: 4
   obiGravity: 0
   obiDamping: 0.99
   ropeSelfCollision: 1
-  adjustSpeed: 0.1
+  ropePID: {x: 10, y: 0, z: 1}
+  adjustSpeed: 50
   gripperTranslationSpeed: 0.5
   gripperRotationSpeed: 0.1
   gripperPID: {x: 10, y: 0, z: 1}
@@ -215,12 +216,14 @@ MonoBehaviour:
   adjustServiceName: /unity_adjust
   resetServiceName: /unity_reset
   eyelet_offset:
-  - {x: 0, y: 0.002, z: 0}
-  - {x: 0, y: 0.002, z: 0}
-  - {x: 0, y: 0.002, z: 0}
-  - {x: 0, y: 0.002, z: 0}
-  adjustTime: 50
-  predictTime: 50
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  adjustTime: 30
+  predictTime: 30
+  adjustDistThresh: 0.0001
+  predDistThresh: 0.01
 --- !u!1 &319885550
 GameObject:
   m_ObjectHideFlags: 0
