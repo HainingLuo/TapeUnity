@@ -190,7 +190,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5fd935e4d33f1bb92ab8b736edb790f0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  timeScale: 0.5
+  timeScale: 1
   timeStep: 0.005
   ropeName: 
   ropeMaterial: {fileID: 2100000, guid: 03019be2b7a654429bf322c3ca0c7a0e, type: 2}
@@ -203,15 +203,15 @@ MonoBehaviour:
   ropeMaxBending: 0.005
   ropeMass: 0.05
   ropeDamping: 0.99
-  obiSubsteps: 4
+  obiSubsteps: 2
   obiGravity: 0
   obiDamping: 0.99
   ropeSelfCollision: 1
-  ropePID: {x: 10, y: 0, z: 1}
+  ropePID: {x: 50, y: 0, z: 1}
   adjustSpeed: 50
   gripperTranslationSpeed: 0.5
   gripperRotationSpeed: 0.1
-  gripperPID: {x: 10, y: 0, z: 1}
+  gripperPID: {x: 50, y: 0, z: 1}
   predServiceName: /unity_predict
   adjustServiceName: /unity_adjust
   resetServiceName: /unity_reset
@@ -223,7 +223,7 @@ MonoBehaviour:
   adjustTime: 30
   predictTime: 30
   adjustDistThresh: 0.0001
-  predDistThresh: 0.01
+  predDistThresh: 0.0001
 --- !u!1 &319885550
 GameObject:
   m_ObjectHideFlags: 0

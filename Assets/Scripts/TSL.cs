@@ -62,6 +62,7 @@ public class TSL : MonoBehaviour
     private List<GameObject> stateMarkersList = new List<GameObject>();
     public float adjustSpeed=1f; // mm
     private int numStates;
+    private List<Vector3> adjustForcePrev = new List<Vector3>();
 
     // grippers
     private List<GameObject> grippersList = new List<GameObject>();
@@ -109,9 +110,12 @@ public class TSL : MonoBehaviour
     private int predictCounter=0;
     public int predictTime=10;
     private float adjustErrorPrev=0;
+    private float predErrorPrev=0;
     public float adjustDistThresh=0.001f;
     public float predDistThresh=0.001f;
 
+    // stopwatch
+    private System.Diagnostics.Stopwatch timer;
 
     async void Start()
     {
@@ -221,6 +225,8 @@ public class TSL : MonoBehaviour
             ropePIDIntegral.Clear();
             ropePIDLastErrors.Clear();
             adjustErrorPrev = 0;
+            predErrorPrev = 0;
+            adjustForcePrev.Clear();
         }
 
         // read the request
@@ -295,6 +301,7 @@ public class TSL : MonoBehaviour
             particleIds.Add(ids);
             ropePIDIntegral.Add(Vector3.zero);
             ropePIDLastErrors.Add(Vector3.zero);
+            adjustForcePrev.Add(Vector3.zero);
         }
         particleIds.RemoveAt(0); // remove the first gripper particle
         particleIds.RemoveAt(numStates-1); // remove the last gripper particle
@@ -362,6 +369,9 @@ public class TSL : MonoBehaviour
         // Debug.Log("Adjusting the environment...");
         // TODO: check validity of the request
 
+        // time the function
+        timer = System.Diagnostics.Stopwatch.StartNew();
+
         // prepare the response
         SimAdjustResponse response = new SimAdjustResponse();
         
@@ -425,6 +435,11 @@ public class TSL : MonoBehaviour
             poseList.Add(new RosPose(states[i].To<FLU>(), emptyRosQuat));
         }
         response.states_sim.poses = poseList.ToArray();
+            
+        // stop the timer
+        timer.Stop();
+        var elapsedMs = timer.ElapsedMilliseconds;
+        Debug.Log("Adjustment time: "+elapsedMs+"ms");
         
         // Debug.Log("Environment adjusted!");
         return response;
@@ -446,7 +461,7 @@ public class TSL : MonoBehaviour
         return id;
     }
 
-    private async Task<SimPredResponse> Predict(SimPredRequest request)
+    private SimPredResponse Predict(SimPredRequest request)
     {
         // Debug.Log("Predicting the environment...");
         // prepare the response
@@ -461,8 +476,10 @@ public class TSL : MonoBehaviour
         // update gripper targets
         for (int i=0; i<request.gripper_poses.poses.Count(); i++) {
             RosPose pose = request.gripper_poses.poses[i];
-            gripperTargets[i] = cam2rob.TransformPoint(pose.position.From<FLU>());
-            gripperTargetOrients[i] = cam2rob.rotation*pose.orientation.From<FLU>();
+            gripperTargets[i] = pose.position.From<FLU>();
+            gripperTargetOrients[i] = pose.orientation.From<FLU>();
+            // gripperTargets[i] = cam2rob.TransformPoint(pose.position.From<FLU>());
+            // gripperTargetOrients[i] = cam2rob.rotation*pose.orientation.From<FLU>();
             // update gripper speed to guarantee reaching the target in prediction time
             // gripperTranslationSpeed = Vector3.Distance(grippersList[i].transform.position, gripperTargets[i])/(predictTime-1);
             // gripperRotationSpeed = Quaternion.Angle(grippersList[i].transform.rotation, gripperTargetOrients[i])/(predictTime-1);
@@ -475,6 +492,7 @@ public class TSL : MonoBehaviour
 
         // start prediction
         predicting = true;
+        predErrorPrev = 0;
         // while (predicting)
         //     await Task.Yield();
 
@@ -512,8 +530,8 @@ public class TSL : MonoBehaviour
             for (int i=0; i<numStates; i++) {
                 distance += Vector3.Distance(statesEst[i], rope.solver.positions[particleIds[i][0]]);
             }
-            if ((distance-adjustErrorPrev)<adjustDistThresh || adjustCounter>adjustTime) {
-                if ((distance-adjustErrorPrev)>=adjustDistThresh) Debug.Log("Adjustment time out!");
+            if (Mathf.Abs(adjustErrorPrev-distance)<adjustDistThresh || adjustCounter>adjustTime) {
+                if (Mathf.Abs(adjustErrorPrev-distance)>=adjustDistThresh) Debug.Log("Adjustment time out!");
                 else Debug.Log("Adjustment finished in "+adjustCounter+" steps. Final distance: "+distance/numStates+"m.");
                 adjusting = false;
                 adjustCounter = 0;
@@ -524,11 +542,14 @@ public class TSL : MonoBehaviour
                 }
                 return;
             }
+            adjustCounter++;
+            adjustErrorPrev = distance;
+        }
 
             // add gravity to corresponding particles
             var particle_velocities = rope.solver.velocities.AsNativeArray<float4>();
             var particle_positions = rope.solver.positions.AsNativeArray<float4>();
-            for (int i=0; i<statesEst.Count; i++) {
+            for (int i=0; i<numStates; i++) {
                 float3 centre = statesEst[i];
                 // // set particle positions to the estimated states
                 // particle_positions[particleIds[i+1][0]] = new float4(centre, 1);
@@ -550,6 +571,7 @@ public class TSL : MonoBehaviour
                 // particle_positions[particleIds[i][0]] = pos;
                 // vel.xyz += (float3)input;
                 // particle_velocities[particleIds[i][0]] = vel;
+                adjustForcePrev[i] = input;
                 rope.solver.externalForces[particleIds[i][0]] += (Vector4)input;
 
                 // // 'gravity'
@@ -568,24 +590,17 @@ public class TSL : MonoBehaviour
                 // rope.solver.externalForces[id] += force;
                 // }
             }
-            adjustCounter++;
-            adjustErrorPrev = distance;
-            
-        // // get a hold of the constraint type we want, in this case, pin constraints:
-        // var pinConstraints = rope.GetConstraintsByType(Oni.ConstraintType.Pin) as ObiConstraints<ObiPinConstraintsBatch>;
-
-        // // remove all batches from it, so we start clean:
-        // pinConstraints.Clear();
-
-        // // this will cause the solver to rebuild pin constraints at the beginning of the next frame:
-        // rope.SetConstraintsDirty(Oni.ConstraintType.Pin);
-        }
 
         if (predicting) {
-        float distance = Vector3.Distance(grippersList[0].transform.position, gripperMarkers[0].transform.position) + 
-                        Vector3.Distance(grippersList[1].transform.position, gripperMarkers[1].transform.position);
-        if (distance<predDistThresh || predictCounter>predictTime) {
-            if (distance>=predDistThresh) Debug.Log("Prediction time out!");
+            float distance = 0;
+            for (int i=0; i<grippersList.Count; i++) {
+                distance += Vector3.Distance(grippersList[i].transform.position, gripperMarkers[i].transform.position);
+            }
+        // float distance = Vector3.Distance(grippersList[0].transform.position, gripperMarkers[0].transform.position) + 
+                        // Vector3.Distance(grippersList[1].transform.position, gripperMarkers[1].transform.position);
+        if (Mathf.Abs(predErrorPrev-distance)<predDistThresh || predictCounter>predictTime) {
+
+            if (Mathf.Abs(predErrorPrev-distance)>=predDistThresh) Debug.Log("Prediction time out!");
             else Debug.Log("Prediction finished in "+predictCounter+" steps.");
             predicting = false;
             predictCounter = 0;
@@ -628,6 +643,7 @@ public class TSL : MonoBehaviour
                 grippersList[i].transform.rotation = Quaternion.RotateTowards(grippersList[i].transform.rotation, gripperTargetOrients[i], gripperRotationSpeed);
             }
             predictCounter++;
+            predErrorPrev = distance;
         }
     }
 
