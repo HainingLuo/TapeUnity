@@ -17,6 +17,7 @@ using RosPoint = RosMessageTypes.Geometry.PointMsg;
 using RosPoseArray = RosMessageTypes.Geometry.PoseArrayMsg;
 using RosQuaternion = RosMessageTypes.Geometry.QuaternionMsg;
 using RosMessageTypes.Tape;
+using RosIntArray = RosMessageTypes.Std.Int32MultiArrayMsg;
 
 
 
@@ -78,6 +79,15 @@ public class TSL : MonoBehaviour
     private List<Vector3> gripperPIDIntegral = new List<Vector3>();
     private List<Vector3> gripperPIDLastErrors = new List<Vector3>();
 
+    // eyelets
+    List<Transform> eyelets = new List<Transform>();
+    private int active_eyelet = -1;
+    private int active_eyelet_l = -1;
+    private int active_eyelet_r = -1;
+    private List<Vector3> target_eyelet_position = new List<Vector3>();
+    private List<Quaternion> target_eyelet_rotation = new List<Quaternion>(); 
+
+
     // ROS
     private ROSConnection rosConnector;
     private RosPoseArray poseArrayMsg = new RosPoseArray();
@@ -125,7 +135,9 @@ public class TSL : MonoBehaviour
         rosConnector.ImplementService<SimAdjustRequest, SimAdjustResponse>(adjustServiceName, Adjust);
         rosConnector.ImplementService<SimResetRequest, SimResetResponse>(resetServiceName, Reset);
         // TODO: (temp solution) add eyelet for testing only
-        rosConnector.Subscribe<RosPoseArray>("/eyelet_poses", tempEyeletCallback);
+        rosConnector.Subscribe<RosPoseArray>("/eyelet_init", tempEyeletCallback);
+        rosConnector.Subscribe<RosIntArray>("/cursor", cursorCallback);
+        rosConnector.Subscribe<RosPoseArray>("/eyelet_pose", eyeletCallback);
         cam2rob = new GameObject("cam2rob").transform;
 
         // initialise fake grippers
@@ -154,7 +166,6 @@ public class TSL : MonoBehaviour
         Debug.Log("Received eyelet poses!");
 
         // generate eyelets
-        List<Transform> eyelets = new List<Transform>();
         GameObject eyelets_object = new GameObject("Eyelets");
         for (int i=0; i<msg.poses.Count(); i++) {
             int row = i/2;
@@ -165,6 +176,8 @@ public class TSL : MonoBehaviour
                                 eyelets_object.transform
                                 );
             eyelets.Add(eyelet.transform);
+            target_eyelet_position.Add(eyelet.transform.position);
+            target_eyelet_rotation.Add(eyelet.transform.rotation);
         }
 
     }
@@ -187,6 +200,29 @@ public class TSL : MonoBehaviour
         eyelet.transform.localScale = scale;
         eyelet.transform.parent = parent;
         return eyelet;
+    }
+
+    void eyeletCallback(RosMessageTypes.Geometry.PoseArrayMsg eyelet_poses)
+    {
+        if (eyelet_poses != null)
+        {
+            for (int i=0; i<eyelet_poses.poses.Count(); i++) {
+                if (eyelet_poses.poses[i].position.x == 0 || double.IsNaN(eyelet_poses.poses[i].position.x)) continue;
+                target_eyelet_position[i] = eyelet_poses.poses[i].position.From<FLU>();
+                // target_eyelet_rotation[i] = eyelet_poses.poses[i].orientation.From<FLU>()*Quaternion.Euler(90,0,0)*Quaternion.Euler(0,90,0);
+                target_eyelet_rotation[i] = eyelet_poses.poses[i].orientation.From<FLU>();
+            } 
+        }
+    }
+    void cursorCallback(RosIntArray cursors)
+    {
+        if (cursors != null)
+        {
+            // active_eyelet = cursors.data[0];
+            active_eyelet_l = cursors.data[0];
+            active_eyelet_r = cursors.data[1];
+            Debug.Log("changing active eyelet to "+active_eyelet_l.ToString()+" "+active_eyelet_r.ToString());
+        }
     }
     /////////////////////////////////////////////////
 
@@ -644,6 +680,16 @@ public class TSL : MonoBehaviour
             }
             predictCounter++;
             predErrorPrev = distance;
+        }
+
+        if (eyelets.Count==0) return;
+        if (active_eyelet_l!=-1 && active_eyelet_l<eyelets.Count-1) {
+            eyelets[active_eyelet_l].position = Vector3.MoveTowards(eyelets[active_eyelet_l].position, target_eyelet_position[active_eyelet_l], 2f);
+            eyelets[active_eyelet_l].rotation = Quaternion.RotateTowards(eyelets[active_eyelet_l].rotation, target_eyelet_rotation[active_eyelet_l], 90f);
+        }
+        if (active_eyelet_r!=-1 && active_eyelet_r<eyelets.Count) {
+            eyelets[active_eyelet_r].position = Vector3.MoveTowards(eyelets[active_eyelet_r].position, target_eyelet_position[active_eyelet_r], 2f);
+            eyelets[active_eyelet_r].rotation = Quaternion.RotateTowards(eyelets[active_eyelet_r].rotation, target_eyelet_rotation[active_eyelet_r], 90f);
         }
     }
 
