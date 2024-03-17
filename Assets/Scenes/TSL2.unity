@@ -220,7 +220,7 @@ MonoBehaviour:
   - {x: 0, y: 0, z: 0}
   - {x: 0, y: 0, z: 0}
   - {x: 0, y: 0, z: 0}
-  adjustTime: 30
+  adjustTime: 15
   predictTime: 30
   adjustDistThresh: 0.0001
   predDistThresh: 0.0001
@@ -289,8 +289,8 @@ MonoBehaviour:
   worldLinearInertiaScale: 0
   worldAngularInertiaScale: 0
   distanceConstraintParameters:
-    evaluationOrder: 1
-    iterations: 4
+    evaluationOrder: 0
+    iterations: 1
     SORFactor: 1
     enabled: 1
   bendingConstraintParameters:

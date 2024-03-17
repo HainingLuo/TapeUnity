@@ -169,12 +169,18 @@ public class TSL2 : MonoBehaviour
         GameObject eyelets_object = new GameObject("Eyelets");
         for (int i=0; i<msg.poses.Count(); i++) {
             int row = i/2;
-            GameObject eyelet = createCapsuleEyelet("Eyelet "+i.ToString(), 
+            GameObject eyelet = createRopeEyelet(i.ToString(), 
                                 msg.poses[i].position.From<FLU>()+eyelet_offset[i],
                                 msg.poses[i].orientation.From<FLU>(),
                                 Vector3.one*0.06f,
                                 eyelets_object.transform
                                 );
+            // GameObject eyelet = createCapsuleEyelet("Eyelet "+i.ToString(), 
+            //                     msg.poses[i].position.From<FLU>()+eyelet_offset[i],
+            //                     msg.poses[i].orientation.From<FLU>(),
+            //                     Vector3.one*0.06f,
+            //                     eyelets_object.transform
+            //                     );
             eyelets.Add(eyelet.transform);
             target_eyelet_position.Add(eyelet.transform.position);
             target_eyelet_rotation.Add(eyelet.transform.rotation);
@@ -199,6 +205,60 @@ public class TSL2 : MonoBehaviour
         eyelet.transform.rotation = rotation;
         eyelet.transform.localScale = scale;
         eyelet.transform.parent = parent;
+        return eyelet;
+    }
+
+    GameObject createRopeEyelet(string name, Vector3 position, Quaternion rotation, Vector3 scale, Transform parent) {
+        // generate rope eyelet
+        GameObject eyelet = new GameObject("Eyelet"+name);
+        // eyelet.transform.localScale = scale;
+        eyelet.transform.parent = parent;
+        // generate points in a loop
+        int eyeletResolution = 6;
+        List<Vector3> points = new List<Vector3>();
+        for (int i=0; i<eyeletResolution; i++) {
+            Vector3 point = new Vector3(Mathf.Cos(Mathf.PI*2/eyeletResolution*i)*0.006f, Mathf.Sin(Mathf.PI*2/eyeletResolution*i)*0.006f, 0);
+            // point+=position;
+            points.Add(point);
+        }
+        points.Add(points[0]);
+        ObiRope rope = Generators.Rope(
+            points:points,
+            material:ropeMaterial,
+            collider_filter:ropeColliderFilter,
+            collider_filter_end:ropeColliderFilterEnd,
+            rope_radius:0.001f,
+            resolution:ropeResolution,
+            pooled_particles:ropePooledParticles,
+            name:name,
+            stretch_compliance:ropeStretchCompliance,
+            stretching_scale:ropeStretchingScale,
+            bend_compliance:ropeBendCompliance,
+            max_bending:ropeMaxBending,
+            mass:ropeMass,
+            damping:ropeDamping,
+            substeps:obiSubsteps,
+            self_collision:false
+            );
+        Debug.Log("Generated "+rope.restLength+"m long Obi Rope with "+ rope.blueprint.groups.Count + " groups and "+rope.solverIndices.Length+" particles.");        
+        // change rope material to white.mat
+        rope.GetComponent<MeshRenderer>().material = Resources.Load<Material>("Materials/White");
+        // // change the invmass of all particles to 0
+        // for (int i=0; i<rope.solverIndices.Length; i++) {
+        //     int index = rope.solverIndices[i];
+        //     rope.solver.invMasses[index] = 0;
+        // }
+        // rope.gameObject.transform.parent = eyelet.transform;
+        // change collision layer
+        rope.gameObject.layer = LayerMask.NameToLayer("eyelet"+name);
+        // add attachment to all groups
+        for (int i=0; i<rope.blueprint.groups.Count(); i++) {
+            ObiParticleAttachment attachment = rope.gameObject.AddComponent<ObiParticleAttachment>();
+            attachment.target = eyelet.transform;
+            attachment.particleGroup = rope.blueprint.groups[i];
+        }
+        eyelet.transform.position = position;
+        eyelet.transform.rotation = rotation;
         return eyelet;
     }
 
@@ -337,7 +397,7 @@ public class TSL2 : MonoBehaviour
             collider_filter:ropeColliderFilter,
             collider_filter_end:ropeColliderFilterEnd,
             rope_radius:ropeRadius,
-            resolution:ropeResolution,
+            resolution:0f,
             pooled_particles:ropePooledParticles,
             name:"",
             stretch_compliance:ropeStretchCompliance,
@@ -351,6 +411,7 @@ public class TSL2 : MonoBehaviour
             );
         Debug.Log("Generated "+rope.restLength+"m long Obi Rope with "+ rope.blueprint.groups.Count + " groups.");
 
+        rope.gameObject.layer = LayerMask.NameToLayer("shoelace");
         // update obi parameters
         rope.gameObject.transform.localScale = new Vector3(1f,1f,1f);
         rope.solver.gravity = new Vector3(0,obiGravity,0);
@@ -384,6 +445,7 @@ public class TSL2 : MonoBehaviour
             gripper.transform.position = cam2rob.TransformPoint(pose.position.From<FLU>());
             gripper.transform.rotation = cam2rob.rotation*pose.orientation.From<FLU>();
             gripper.transform.parent = grippers.transform;
+            gripper.layer = LayerMask.NameToLayer("aglets");
             grippersList.Add(gripper);
             // add gripper targets
             gripperTargets.Add(gripper.transform.position);
