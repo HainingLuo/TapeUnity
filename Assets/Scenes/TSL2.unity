@@ -191,6 +191,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   camera: {fileID: 1996583892}
+  demoCamDist: 0.3
   timeScale: 1
   timeStep: 0.005
   ropeName: 
@@ -201,7 +202,7 @@ MonoBehaviour:
   ropeStretchCompliance: 0
   ropeStretchingScale: 1
   ropeBendCompliance: 0
-  ropeMaxBending: 0.005
+  ropeMaxBending: 0.01
   ropeMass: 0.05
   ropeDamping: 0.99
   obiSubsteps: 2
@@ -210,9 +211,11 @@ MonoBehaviour:
   ropeSelfCollision: 1
   ropePID: {x: 50, y: 0, z: 1}
   adjustSpeed: 50
-  gripperTranslationSpeed: 0.5
+  gripperTranslationSpeed: 0.05
   gripperRotationSpeed: 0.1
   gripperPID: {x: 50, y: 0, z: 1}
+  eyeletSize: 0.006
+  eyeletThickness: 0.002
   predServiceName: /unity_predict
   adjustServiceName: /unity_adjust
   resetServiceName: /unity_reset
@@ -221,7 +224,7 @@ MonoBehaviour:
   - {x: 0, y: 0, z: 0}
   - {x: 0, y: 0, z: 0}
   - {x: 0, y: 0, z: 0}
-  adjustTime: 15
+  adjustTime: 30
   predictTime: 30
   adjustDistThresh: 0.0001
   predDistThresh: 0.0001
@@ -1279,8 +1282,8 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
-  far clip plane: 1000
+  near clip plane: 0.05
+  far clip plane: 10
   field of view: 60
   orthographic: 0
   orthographic size: 5
