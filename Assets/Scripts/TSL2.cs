@@ -23,6 +23,10 @@ using RosIntArray = RosMessageTypes.Std.Int32MultiArrayMsg;
 
 public class TSL2 : MonoBehaviour
 {    
+    // demo camera
+    public Camera camera;
+    private float rotateCounter = 360;
+
     // Unity params
     public float timeScale = 1.0f;
     public float timeStep = 0.02f;
@@ -643,6 +647,32 @@ public class TSL2 : MonoBehaviour
 
     private void FixedUpdate()
     {
+        // spin demo camera
+        if (Input.GetKey("d")) {
+            // find the eyelet centre
+            Vector3 eyeletCentre = Vector3.zero;
+            for (int i=0; i<eyelets.Count; i++) {
+                eyeletCentre += eyelets[i].position;
+            }
+            eyeletCentre /= eyelets.Count;
+            // reset camera pose to be 1m to the eyelet centre and look at the eyelet centre
+            camera.transform.position = new Vector3(0, 0, -1)+eyeletCentre;
+            camera.transform.LookAt(eyeletCentre);
+            // spin the camera around the eyelet centre for 360 degrees
+            rotateCounter = 0;
+        }
+        if (rotateCounter<360) {
+            // find the eyelet centre
+            Vector3 eyeletCentre = Vector3.zero;
+            for (int i=0; i<eyelets.Count; i++) {
+                eyeletCentre += eyelets[i].position;
+            }
+            eyeletCentre /= eyelets.Count;
+            // rotate the camera around the eyelet centre
+            rotateCounter += 20 * Time.deltaTime;
+            camera.transform.RotateAround(eyeletCentre, Vector3.up, 20 * Time.deltaTime);
+        }
+
         if (!initialised) return;
 
         
