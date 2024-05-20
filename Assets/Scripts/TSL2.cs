@@ -131,8 +131,18 @@ public class TSL2 : MonoBehaviour
     // stopwatch
     private System.Diagnostics.Stopwatch timer;
 
+
+    private FpsDisplay fpsDisplay;
+
+
     async void Start()
     {
+        fpsDisplay = gameObject.AddComponent<FpsDisplay>();
+        fpsDisplay.showFPS = true;
+        // Limit framerate to cinematic 24fps.
+        QualitySettings.vSyncCount = 0; // Set vSyncCount to 0 so that using .targetFrameRate is enabled.
+        Application.targetFrameRate = 120;
+
         // SET ROS CONNECTION
         rosConnector = ROSConnection.instance;
         rosConnector.ImplementService<SimAdjustRequest, SimAdjustResponse>(adjustServiceName, Adjust);
@@ -161,7 +171,8 @@ public class TSL2 : MonoBehaviour
         // Initialise grasping point
         // int gsp_pt_ptc_id = rope.blueprint.groups[grasp_pt].particleIndices[0];
         // point_g = (Vector3)rope.solver.positions[gsp_pt_ptc_id];
-    
+        Debug.Log("Simulation started!");
+        fpsDisplay.sysMessage = "Status: Ready";
     }
 
 
@@ -326,6 +337,7 @@ public class TSL2 : MonoBehaviour
 
     private async Task<SimResetResponse> Reset(SimResetRequest request) 
     {
+        fpsDisplay.sysMessage = "Status: Resetting";
         Debug.Log("Resetting the environment...");
         initialised = false;
         // prepare the response
@@ -497,6 +509,7 @@ public class TSL2 : MonoBehaviour
             await Task.Yield();
 
         Debug.Log("Environment reset!");
+        fpsDisplay.sysMessage = "Status: Ready";
         return response;
     }
     
@@ -576,6 +589,7 @@ public class TSL2 : MonoBehaviour
         timer.Stop();
         var elapsedMs = timer.ElapsedMilliseconds;
         Debug.Log("Adjustment time: "+elapsedMs+"ms");
+        fpsDisplay.debugMessage = "Adjustment time: "+elapsedMs+"ms";
         
         // Debug.Log("Environment adjusted!");
         return response;

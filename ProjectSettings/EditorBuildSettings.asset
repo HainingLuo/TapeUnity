@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/TSL2.unity
+    guid: ee4ef795fe783efc6ba1bfc01651e97c
   m_configObjects: {}

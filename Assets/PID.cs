@@ -1,23 +1,21 @@
 [System.Serializable]
 public class PID {
-	public float pFactor, iFactor, dFactor;
+	public float kp, ki, kd;
 		
 	float integral;
-	float lastError;
+	float et_1;
 	
 	
-	public PID(float pFactor, float iFactor, float dFactor) {
-		this.pFactor = pFactor;
-		this.iFactor = iFactor;
-		this.dFactor = dFactor;
+	public PID(float kp, float ki, float kd) {
+		this.kp = kp;
+		this.ki = ki;
+		this.kd = kd;
 	}
 	
-	
-	public float Update(float setpoint, float actual, float timeFrame) {
-		float present = setpoint - actual;
-		integral += present * timeFrame;
-		float deriv = (present - lastError) / timeFrame;
-		lastError = present;
-		return present * pFactor + integral * iFactor + deriv * dFactor;
+	public float Update(float r, float y, float dt) {
+		float et = r - y;
+		integral += et * dt;
+		et_1 = et;
+		return kp * et + ki * integral + kd * (et - et_1) / dt;
 	}
 }
