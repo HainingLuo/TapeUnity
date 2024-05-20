@@ -26,6 +26,7 @@ public class TSL2 : MonoBehaviour
     // demo camera
     public Camera camera;
     private float rotateCounter = 360;
+    public float demoCamDist = 1.0f;
 
     // Unity params
     public float timeScale = 1.0f;
@@ -84,6 +85,8 @@ public class TSL2 : MonoBehaviour
     private List<Vector3> gripperPIDLastErrors = new List<Vector3>();
 
     // eyelets
+    public float eyeletSize = 0.006f;
+    public float eyeletThickness = 0.001f;
     List<Transform> eyelets = new List<Transform>();
     private int active_eyelet = -1;
     private int active_eyelet_l = -1;
@@ -232,17 +235,18 @@ public class TSL2 : MonoBehaviour
         int eyeletResolution = 6;
         List<Vector3> points = new List<Vector3>();
         for (int i=0; i<eyeletResolution; i++) {
-            Vector3 point = new Vector3(Mathf.Cos(Mathf.PI*2/eyeletResolution*i)*0.006f, Mathf.Sin(Mathf.PI*2/eyeletResolution*i)*0.006f, 0);
+            Vector3 point = new Vector3(Mathf.Cos(Mathf.PI*2/eyeletResolution*i)*eyeletSize, Mathf.Sin(Mathf.PI*2/eyeletResolution*i)*eyeletSize, 0);
             // point+=position;
             points.Add(point);
         }
         points.Add(points[0]);
+        points.Add(points[1]);
         ObiRope rope = Generators.Rope(
             points:points,
             material:ropeMaterial,
             collider_filter:ropeColliderFilter,
             collider_filter_end:ropeColliderFilterEnd,
-            rope_radius:0.001f,
+            rope_radius:eyeletThickness,
             resolution:ropeResolution,
             pooled_particles:ropePooledParticles,
             name:name,
@@ -670,7 +674,7 @@ public class TSL2 : MonoBehaviour
             }
             eyeletCentre /= eyelets.Count;
             // reset camera pose to be 1m to the eyelet centre and look at the eyelet centre
-            camera.transform.position = new Vector3(0, 0, -1)+eyeletCentre;
+            camera.transform.position = new Vector3(0, 0, -demoCamDist)+eyeletCentre;
             camera.transform.LookAt(eyeletCentre);
             // spin the camera around the eyelet centre for 360 degrees
             rotateCounter = 0;
