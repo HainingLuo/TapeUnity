@@ -16,7 +16,7 @@ using RosPose = RosMessageTypes.Geometry.PoseMsg;
 using RosPoint = RosMessageTypes.Geometry.PointMsg;
 using RosPoseArray = RosMessageTypes.Geometry.PoseArrayMsg;
 using RosQuaternion = RosMessageTypes.Geometry.QuaternionMsg;
-using RosMessageTypes.Tape;
+using RosMessageTypes.Tsl;
 using RosIntArray = RosMessageTypes.Std.Int32MultiArrayMsg;
 
 
@@ -283,6 +283,11 @@ public class TSL2 : MonoBehaviour
 
     void eyeletCallback(RosMessageTypes.Geometry.PoseArrayMsg eyelet_poses)
     {
+        if (!initialised) {
+            Debug.Log("Environment not initialised yet!");
+            return;
+        }
+
         if (eyelet_poses != null)
         {
             for (int i=0; i<eyelet_poses.poses.Count(); i++) {
@@ -382,6 +387,23 @@ public class TSL2 : MonoBehaviour
         // read the request
         cam2rob.position = request.cam2rob.translation.From<FLU>();
         cam2rob.rotation = request.cam2rob.rotation.From<FLU>();
+
+        // generate eyelets
+        GameObject eyelets_object = new GameObject("Eyelets");
+        for (int i=0; i<request.eyelet_poses.poses.Count(); i++) {
+            int row = i/2;
+            GameObject eyelet = createRopeEyelet(i.ToString(), 
+                                request.eyelet_poses.poses[i].position.From<FLU>()+eyelet_offset[i],
+                                request.eyelet_poses.poses[i].orientation.From<FLU>(),
+                                Vector3.one*0.06f,
+                                eyelets_object.transform
+                                );
+            eyelets.Add(eyelet.transform);
+            target_eyelet_position.Add(eyelet.transform.position);
+            target_eyelet_rotation.Add(eyelet.transform.rotation);
+        }
+
+        // read the initial states
         stateMarkers = new GameObject("StateMarkers");
         numStates = request.states_est.poses.Count();
         for (int i=0; i<numStates; i++) {
