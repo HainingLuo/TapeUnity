@@ -101,6 +101,8 @@ public class TSL2 : MonoBehaviour
     public string predServiceName = "/unity_predict";
     public string adjustServiceName = "/unity_adjust";
     public string resetServiceName = "/unity_reset";
+    public string agletTopic = "/aglet_pose";
+    public string eyeletTopic = "/eyelet_pose";
     private Transform cam2rob;
     
     // cuz im lazy
@@ -153,8 +155,8 @@ public class TSL2 : MonoBehaviour
         // TODO: (temp solution) add eyelet for testing only
         rosConnector.Subscribe<RosPoseArray>("/eyelet_init", tempEyeletCallback);
         rosConnector.Subscribe<RosIntArray>("/cursor", cursorCallback);
-        rosConnector.Subscribe<RosPoseArray>("/eyelet_pose", eyeletCallback);
-        rosConnector.Subscribe<RosPoseArray>("/aglet_pose", agletCallback);
+        rosConnector.Subscribe<RosPoseArray>(eyeletTopic, eyeletCallback);
+        rosConnector.Subscribe<RosPoseArray>(agletTopic, agletCallback);
         cam2rob = new GameObject("cam2rob").transform;
 
         // initialise fake grippers

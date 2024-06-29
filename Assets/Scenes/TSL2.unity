@@ -219,6 +219,8 @@ MonoBehaviour:
   predServiceName: /unity_predict
   adjustServiceName: /unity_adjust
   resetServiceName: /unity_reset
+  agletTopic: /aglet_pose
+  eyeletTopic: /eyelet_pose
   eyelet_offset:
   - {x: 0, y: 0, z: 0}
   - {x: 0, y: 0, z: 0}
